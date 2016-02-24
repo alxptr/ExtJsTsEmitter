@@ -379,10 +379,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         const compilerOptions = host.getCompilerOptions();
         const languageVersion = getEmitScriptTarget(compilerOptions);
         const modulekind = getEmitModuleKind(compilerOptions);
+        const extJsModuleKind = modulekind === ModuleKind.ExtJS;
         const sourceMapDataList: SourceMapData[] = compilerOptions.sourceMap || compilerOptions.inlineSourceMap ? [] : undefined;
         const emitterDiagnostics = createDiagnosticCollection();
         let emitSkipped = false;
         const newLine = host.getNewLine();
+
+        compilerOptions.isolatedModules = extJsModuleKind || compilerOptions.isolatedModules;   // The parameter isolatedModules enabled ExtJS package delegate mode
+        compilerOptions.removeComments = extJsModuleKind || compilerOptions.removeComments;     // We use the comments for our purposes
 
         const emitJavaScript = createFileEmitter();
         forEachExpectedEmitFile(host, emitFile, targetSourceFile);
@@ -568,6 +572,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 [ModuleKind.ES6]: emitES6Module,
                 [ModuleKind.AMD]: emitAMDModule,
                 [ModuleKind.System]: emitSystemModule,
+                [ModuleKind.ExtJS]: emitSystemModule,
                 [ModuleKind.UMD]: emitUMDModule,
                 [ModuleKind.CommonJS]: emitCommonJSModule,
             };
@@ -576,6 +581,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 [ModuleKind.ES6]() {},
                 [ModuleKind.AMD]: emitAMDModule,
                 [ModuleKind.System]: emitSystemModule,
+                [ModuleKind.ExtJS]: emitSystemModule,
                 [ModuleKind.UMD]() {},
                 [ModuleKind.CommonJS]() {},
             };
@@ -1705,7 +1711,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                         write("_super.prototype");
                     }
                     else {
-                        write("_super");
+                        write(extJsModuleKind ? "this" : "_super");
                     }
                 }
             }
@@ -2429,7 +2435,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 }
 
                 if (superCall && (languageVersion < ScriptTarget.ES6 || isAsyncMethodWithSuper)) {
-                    write(".call(");
+                    write(extJsModuleKind ? ".callParent(" : ".call(");
                     emitThis(expression);
                     if (node.arguments.length) {
                         write(", ");
@@ -5155,13 +5161,22 @@ const _super = (function (geti, seti) {
                 }
                 emitStart(ctor || node);
 
-                if (languageVersion < ScriptTarget.ES6) {
+                if (languageVersion < ScriptTarget.ES6 && !extJsModuleKind) {
                     write("function ");
                     emitDeclarationName(node);
                     emitSignatureParameters(ctor);
                 }
                 else {
-                    write("constructor");
+                    if (extJsModuleKind) {
+                        write("var ");                          // Added: <var BaseClass = {};>
+                        emitDeclarationName(node);
+                        write(" = {};");
+                        writeLine();
+                        emitDeclarationName(node);              // Added: <BaseClass.constructor = ...>
+                        write(".constructor = function");
+                    } else {
+                        write("constructor");
+                    }
                     if (ctor) {
                         emitSignatureParameters(ctor);
                     }
@@ -5558,7 +5573,7 @@ const _super = (function (geti, seti) {
 
             function emitClassMemberPrefix(node: ClassLikeDeclaration, member: Node) {
                 emitDeclarationName(node);
-                if (!(member.flags & NodeFlags.Static)) {
+                if (!(member.flags & NodeFlags.Static) && !extJsModuleKind) {
                     write(".prototype");
                 }
             }
