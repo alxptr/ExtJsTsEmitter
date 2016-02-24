@@ -5173,9 +5173,9 @@ const _super = (function (geti, seti) {
                         write(" = {};");
                         writeLine();
                         emitDeclarationName(node);              // Added <BaseClass.__className = 'BaseClass';>
-                        write(".__className = '");
+                        write(".__className = \"");
                         emitDeclarationName(node);
-                        write("';");
+                        write("\";");
                         writeLine();
                         emitDeclarationName(node);              // Added: <BaseClass.constructor = ...>
                         write(".constructor = function");
