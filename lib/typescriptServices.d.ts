@@ -1506,6 +1506,7 @@ declare namespace ts {
         System = 4,
         ES6 = 5,
         ES2015 = 5,
+        ExtJS = 6,
     }
     enum JsxEmit {
         None = 0,
