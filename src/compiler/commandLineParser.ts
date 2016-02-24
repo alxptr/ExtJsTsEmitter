@@ -91,6 +91,7 @@ namespace ts {
                 "umd": ModuleKind.UMD,
                 "es6": ModuleKind.ES6,
                 "es2015": ModuleKind.ES2015,
+                "extjs": ModuleKind.ExtJS,
             },
             description: Diagnostics.Specify_module_code_generation_Colon_commonjs_amd_system_umd_or_es2015,
             paramType: Diagnostics.KIND,
