@@ -5172,6 +5172,11 @@ const _super = (function (geti, seti) {
                         emitDeclarationName(node);
                         write(" = {};");
                         writeLine();
+                        emitDeclarationName(node);              // Added <BaseClass.__className = 'BaseClass';>
+                        write(".__className = '");
+                        emitDeclarationName(node);
+                        write("';");
+                        writeLine();
                         emitDeclarationName(node);              // Added: <BaseClass.constructor = ...>
                         write(".constructor = function");
                     } else {
@@ -5250,7 +5255,11 @@ const _super = (function (geti, seti) {
                 }
                 decreaseIndent();
                 emitToken(SyntaxKind.CloseBraceToken, ctor ? (<Block>ctor.body).statements.end : node.members.end);
-                emitEnd(<Node>ctor || node);
+                if (extJsModuleKind) {
+                    write(";");                 // Added ";": BaseClass.constructor = function () { ... } <;>
+                } else {
+                    emitEnd(<Node>ctor || node);
+                }
                 if (ctor) {
                     emitTrailingComments(ctor);
                 }
@@ -5526,9 +5535,14 @@ const _super = (function (geti, seti) {
                 if (baseTypeNode) {
                     writeLine();
                     emitStart(baseTypeNode);
-                    write("__extends(");
-                    emitDeclarationName(node);
-                    write(", _super);");
+                    if (extJsModuleKind) {
+                        emitDeclarationName(node);
+                        write(".extend = _super.__className;");     // Apply ExtJS extend style: <BaseClass.extend = ParentClass.name>
+                    } else {
+                        write("__extends(");
+                        emitDeclarationName(node);
+                        write(", _super);");
+                    }
                     emitEnd(baseTypeNode);
                 }
                 writeLine();
