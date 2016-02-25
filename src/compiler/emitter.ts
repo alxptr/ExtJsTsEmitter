@@ -376,6 +376,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };`;
 
+        const fileSeparator = '/';
         const compilerOptions = host.getCompilerOptions();
         const languageVersion = getEmitScriptTarget(compilerOptions);
         const modulekind = getEmitModuleKind(compilerOptions);
@@ -7346,19 +7347,38 @@ const _super = (function (geti, seti) {
 
             function emitExtJSModule(node:SourceFile, emitRelativePathAsModuleName?:boolean):void {
                 collectExternalModuleInfo(node);
+                const extClassName = toExtJsPath(node, node.fileName);
+
                 for (let i = 0; i < node.statements.length; i++) {
                     const statement = node.statements[i];
                     writeLine();
                     emit(statement);
                 }
                 writeLine();
-                write("Ext.define(\"..\", {}, function () {");
+                write("Ext.define(\"");
+                write(extClassName);
+                write("\", {}, function () {");
                 writeLine();
-                write("     var config = exports[Object.keys(exports)[0]];");
+                write("     var exportedClassname = Object.keys(exports)[0],");
                 writeLine();
-                write("     Ext.define(\"..\", config);");
+                write("          config = exports[exportedClassname];");
+                writeLine();
+                write("     Ext.define(\"");
+                write(extClassName);
+                write("\", config);");
                 writeLine();
                 write("});");
+            }
+
+            function getAbsolutePath():string {
+                return "C:/sources/git_console/typescript/lib";
+            }
+
+            function toExtJsPath(node:any, filePath:string):string {
+                return filePath.replace(getAbsolutePath() + fileSeparator, '')
+                    .replace('.ts', '')
+                    .split(fileSeparator)
+                    .join('.');
             }
 
             function getExtJsRequires(node:any):Array<string> {
@@ -7367,60 +7387,12 @@ const _super = (function (geti, seti) {
                     node = node.parent;
                 }
 
-                const modules = new Array<Array<any>>();
-                const fileSeparator = '/';
+                const resolvedModules = node.resolvedModules;
+                const result = new Array<string>();
 
-                let resolvedModules = node.resolvedModules;
-                let result = new Array<string>();
-
-                if (!resolvedModules) {
-                    return result;
-                }
-
-                modules.push(node.fileName.split(fileSeparator));
-                for (let resolvedModuleIndex in resolvedModules) {
-                    modules.push(resolvedModules[resolvedModuleIndex].resolvedFileName.split(fileSeparator));
-                }
-
-                let previousFolder:string;
-                let complete:boolean = false;
-                let index:number = 0;
-                let findedPath:boolean = false;
-
-                while (!complete && !findedPath) {
-                    complete = true;
-                    previousFolder = null;
-
-                    modules.forEach(function (currentModule:any, j:number) {
-                        if (currentModule.length <= index) {
-                            return;
-                        }
-                        let currentFolder:string = currentModule[index];
-
-                        if (!findedPath) {
-                            // We put at least one element the module name, and then later delete it
-                            result[index] = currentFolder;
-                        }
-                        if (previousFolder !== null && previousFolder !== currentFolder) {
-                            findedPath = true;
-                        }
-                        previousFolder = currentFolder;
-                        complete = complete && false; // Continue cycle
-                    });
-                    index++;
-                }
-
-                result.pop(); // Remove the last element as module name
-                const absolutePath = result.join(fileSeparator);
-
-                result = new Array<string>();
                 for (var i in resolvedModules) {
                     result.push(
-                        "\"" + resolvedModules[i].resolvedFileName
-                            .replace(absolutePath, '')
-                            .replace('.ts', '')
-                            .split(fileSeparator)
-                            .join('.') + "\""
+                        "\"" + toExtJsPath(node, resolvedModules[i].resolvedFileName) + "\""
                     );
                 }
                 return result;
