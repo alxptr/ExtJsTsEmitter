@@ -5168,9 +5168,16 @@ const _super = (function (geti, seti) {
                 }
                 else {
                     if (extJsModuleKind) {
+                        let dependencies = getExtJsRequires(node);
                         write("var ");                          // Added: <var BaseClass = {};>
                         emitDeclarationName(node);
-                        write(" = {};");
+                        write(" = {");
+                        writeLine();
+                        write("  requires: [");
+                        write(dependencies.join(','));
+                        write("]");
+                        writeLine();
+                        write("};");
                         writeLine();
                         emitDeclarationName(node);              // Added <BaseClass.__className = 'BaseClass';>
                         write(".__className = \"");
@@ -7333,40 +7340,79 @@ const _super = (function (geti, seti) {
                 write("});");
             }
 
-            function emitExtJSModule(node: SourceFile,  emitRelativePathAsModuleName?: boolean): void {
+            function emitExtJSModule(node:SourceFile, emitRelativePathAsModuleName?:boolean):void {
                 collectExternalModuleInfo(node);
 
-                const groupIndices: Map<number> = {};
-                const dependencyGroups: DependencyGroup[] = [];
-                const dependencies = new Array<string>();
+                for (let i = 0; i < node.statements.length; i++) {
+                    const statement = node.statements[i];
+                    writeLine();
+                    emit(statement);
+                }
+            }
 
-                for (let i = 0; i < externalImports.length; i++) {
-                    const text = getExternalModuleNameText(externalImports[i], true);
-                    if (text === undefined) {
-                        continue;
-                    }
-                    // text should be quoted string
-                    // for deduplication purposes in key remove leading and trailing quotes so 'a' and "a" will be considered the same
-                    const key = text.substr(1, text.length - 2);
-
-                    if (hasProperty(groupIndices, key)) {
-                        // deduplicate/group entries in dependency list by the dependency name
-                        const groupIndex = groupIndices[key];
-                        dependencyGroups[groupIndex].push(externalImports[i]);
-                        continue;
-                    }
-                    else {
-                        groupIndices[key] = dependencyGroups.length;
-                        dependencyGroups.push([externalImports[i]]);
-                    }
-                    dependencies.push(text);
+            function getExtJsRequires(node:any):Array<string> {
+                // Go to root
+                while (node.parent) {
+                    node = node.parent;
                 }
 
-                // TODO
-                console.log(dependencies);
+                const modules = new Array<Array<any>>();
+                const fileSeparator = '/';
 
-                emitCaptureThisForNodeIfNecessary(node);
-                emitSystemModuleBody(node, dependencyGroups, 0);
+                let resolvedModules = node.resolvedModules;
+                let result = new Array<string>();
+
+                if (!resolvedModules) {
+                    return result;
+                }
+
+                modules.push(node.fileName.split(fileSeparator));
+                for (let resolvedModuleIndex in resolvedModules) {
+                    modules.push(resolvedModules[resolvedModuleIndex].resolvedFileName.split(fileSeparator));
+                }
+
+                let previousFolder:string;
+                let complete:boolean = false;
+                let index:number = 0;
+                let findedPath:boolean = false;
+
+                while (!complete && !findedPath) {
+                    complete = true;
+                    previousFolder = null;
+
+                    modules.forEach(function (currentModule:any, j:number) {
+                        if (currentModule.length <= index) {
+                            return;
+                        }
+                        let currentFolder:string = currentModule[index];
+
+                        if (!findedPath) {
+                            // We put at least one element the module name, and then later delete it
+                            result[index] = currentFolder;
+                        }
+                        if (previousFolder !== null && previousFolder !== currentFolder) {
+                            findedPath = true;
+                        }
+                        previousFolder = currentFolder;
+                        complete = complete && false; // Continue cycle
+                    });
+                    index++;
+                }
+
+                result.pop(); // Remove the last element as module name
+                const absolutePath = result.join(fileSeparator);
+
+                result = new Array<string>();
+                for (var i in resolvedModules) {
+                    result.push(
+                        "\"" + resolvedModules[i].resolvedFileName
+                            .replace(absolutePath, '')
+                            .replace('.ts', '')
+                            .split(fileSeparator)
+                            .join('.') + "\""
+                    );
+                }
+                return result;
             }
 
             interface AMDDependencyNames {
