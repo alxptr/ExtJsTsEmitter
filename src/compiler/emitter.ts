@@ -3774,7 +3774,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                         write(getGeneratedNameForNode(container));
                         write(".");
                     }
-                    else if (modulekind !== ModuleKind.ES6 && modulekind !== ModuleKind.System && !extJsModuleKind) {
+                    else if (modulekind !== ModuleKind.ES6 && modulekind !== ModuleKind.System) {
+                        if (extJsModuleKind) {
+                            write("var exports = {};");
+                            writeLine();
+                        }
                         write("exports.");
                     }
                 }
@@ -7342,12 +7346,19 @@ const _super = (function (geti, seti) {
 
             function emitExtJSModule(node:SourceFile, emitRelativePathAsModuleName?:boolean):void {
                 collectExternalModuleInfo(node);
-
                 for (let i = 0; i < node.statements.length; i++) {
                     const statement = node.statements[i];
                     writeLine();
                     emit(statement);
                 }
+                writeLine();
+                write("Ext.define(\"..\", {}, function () {");
+                writeLine();
+                write("     var config = exports[Object.keys(exports)[0]];");
+                writeLine();
+                write("     Ext.define(\"..\", config);");
+                writeLine();
+                write("});");
             }
 
             function getExtJsRequires(node:any):Array<string> {
