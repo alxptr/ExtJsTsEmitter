@@ -5174,15 +5174,10 @@ const _super = (function (geti, seti) {
                 else {
                     if (extJsModuleKind) {
                         let dependencies = getExtJsRequires(node);
-                        write("var ");                          // Added: <var BaseClass = {};>
                         emitDeclarationName(node);
-                        write(" = {");
-                        writeLine();
-                        write("  requires: [");
+                        write(".requires = [");
                         write(dependencies.join(','));
-                        write("]");
-                        writeLine();
-                        write("};");
+                        write("];");
                         writeLine();
                         emitDeclarationName(node);              // Added <BaseClass.__className = 'BaseClass';>
                         write(".__className = \"");
@@ -7347,7 +7342,8 @@ const _super = (function (geti, seti) {
 
             function emitExtJSModule(node:SourceFile, emitRelativePathAsModuleName?:boolean):void {
                 collectExternalModuleInfo(node);
-                const extClassName = toExtJsPath(node, node.fileName);
+                const extFullClassName = toExtJsPath(node, node.fileName);
+                const extClassName = /.+\.(.+)/.exec(extFullClassName)[1];
 
                 for (let i = 0; i < node.statements.length; i++) {
                     const statement = node.statements[i];
@@ -7356,16 +7352,14 @@ const _super = (function (geti, seti) {
                 }
                 writeLine();
                 write("Ext.define(\"");
-                write(extClassName);
+                write(extFullClassName);
                 write("\", {}, function () {");
                 writeLine();
-                write("     var exportedClassname = Object.keys(exports)[0],");
-                writeLine();
-                write("          config = exports[exportedClassname];");
-                writeLine();
                 write("     Ext.define(\"");
+                write(extFullClassName);
+                write("\", ");
                 write(extClassName);
-                write("\", config);");
+                write(");");
                 writeLine();
                 write("});");
             }
