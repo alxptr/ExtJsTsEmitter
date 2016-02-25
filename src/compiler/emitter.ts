@@ -572,7 +572,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 [ModuleKind.ES6]: emitES6Module,
                 [ModuleKind.AMD]: emitAMDModule,
                 [ModuleKind.System]: emitSystemModule,
-                [ModuleKind.ExtJS]: emitSystemModule,
+                [ModuleKind.ExtJS]: emitExtJSModule,
                 [ModuleKind.UMD]: emitUMDModule,
                 [ModuleKind.CommonJS]: emitCommonJSModule,
             };
@@ -581,7 +581,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 [ModuleKind.ES6]() {},
                 [ModuleKind.AMD]: emitAMDModule,
                 [ModuleKind.System]: emitSystemModule,
-                [ModuleKind.ExtJS]: emitSystemModule,
+                [ModuleKind.ExtJS]: emitExtJSModule,
                 [ModuleKind.UMD]() {},
                 [ModuleKind.CommonJS]() {},
             };
@@ -7115,6 +7115,7 @@ const _super = (function (geti, seti) {
                 //         }
                 //     };
                 // }
+                console.log(dependencyGroups);
                 emitVariableDeclarationsForImports();
                 writeLine();
                 const exportedDeclarations = processTopLevelVariableAndFunctionDeclarations(node);
@@ -7331,6 +7332,42 @@ const _super = (function (geti, seti) {
                 decreaseIndent();
                 writeLine();
                 write("});");
+            }
+
+            function emitExtJSModule(node: SourceFile,  emitRelativePathAsModuleName?: boolean): void {
+                collectExternalModuleInfo(node);
+
+                const groupIndices: Map<number> = {};
+                const dependencyGroups: DependencyGroup[] = [];
+                const dependencies = new Array<string>();
+
+                for (let i = 0; i < externalImports.length; i++) {
+                    const text = getExternalModuleNameText(externalImports[i], true);
+                    if (text === undefined) {
+                        continue;
+                    }
+                    // text should be quoted string
+                    // for deduplication purposes in key remove leading and trailing quotes so 'a' and "a" will be considered the same
+                    const key = text.substr(1, text.length - 2);
+
+                    if (hasProperty(groupIndices, key)) {
+                        // deduplicate/group entries in dependency list by the dependency name
+                        const groupIndex = groupIndices[key];
+                        dependencyGroups[groupIndex].push(externalImports[i]);
+                        continue;
+                    }
+                    else {
+                        groupIndices[key] = dependencyGroups.length;
+                        dependencyGroups.push([externalImports[i]]);
+                    }
+                    dependencies.push(text);
+                }
+
+                // TODO
+                console.log(dependencies);
+
+                emitCaptureThisForNodeIfNecessary(node);
+                emitSystemModuleBody(node, dependencyGroups, 0);
             }
 
             interface AMDDependencyNames {
