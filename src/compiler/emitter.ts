@@ -5179,6 +5179,9 @@ const _super = (function (geti, seti) {
                         write(dependencies.join(','));
                         write("];");
                         writeLine();
+                        emitDeclarationName(node);
+                        write(".statics = {};");
+                        writeLine();
                         emitDeclarationName(node);              // Added <BaseClass.__className = 'BaseClass';>
                         write(".__className = \"");
                         emitDeclarationName(node);
@@ -5594,8 +5597,14 @@ const _super = (function (geti, seti) {
 
             function emitClassMemberPrefix(node: ClassLikeDeclaration, member: Node) {
                 emitDeclarationName(node);
-                if (!(member.flags & NodeFlags.Static) && !extJsModuleKind) {
-                    write(".prototype");
+                if (!(member.flags & NodeFlags.Static)) {
+                    if (!extJsModuleKind) {
+                        write(".prototype");
+                    }
+                } else {
+                    if (extJsModuleKind) {
+                        write(".statics");
+                    }
                 }
             }
 
