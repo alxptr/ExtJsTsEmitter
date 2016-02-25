@@ -3774,7 +3774,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                         write(getGeneratedNameForNode(container));
                         write(".");
                     }
-                    else if (modulekind !== ModuleKind.ES6 && modulekind !== ModuleKind.System) {
+                    else if (modulekind !== ModuleKind.ES6 && modulekind !== ModuleKind.System && !extJsModuleKind) {
                         write("exports.");
                     }
                 }
