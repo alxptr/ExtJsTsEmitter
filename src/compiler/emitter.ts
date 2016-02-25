@@ -7115,7 +7115,6 @@ const _super = (function (geti, seti) {
                 //         }
                 //     };
                 // }
-                console.log(dependencyGroups);
                 emitVariableDeclarationsForImports();
                 writeLine();
                 const exportedDeclarations = processTopLevelVariableAndFunctionDeclarations(node);
